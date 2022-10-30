@@ -13,8 +13,15 @@ class UserAuth extends Dbh{
         $conn = $this->db->connect();
         if($this->confirmPasswordMatch($password, $confirmPassword)){
             $sql = "INSERT INTO Students (`full_names`, `email`, `password`, `country`, `gender`) VALUES ('$fullname','$email', '$password', '$country', '$gender')";
+           $select = "SELECT email FROM students where email='$email'";
+            $result = $conn->query($select);
+            if ($result->num_rows > 0) {
+                echo "<script>alert('User already exists')</script>";
+                header('refresh:1; url=forms/register.php');
+            } else {
             if($conn->query($sql)){
-               echo "Ok";
+               echo "connection successful";
+                header('location:forms/login.php');
             } else {
                 echo "Opps". $conn->error;
             }
@@ -28,10 +35,12 @@ class UserAuth extends Dbh{
         $sql = "SELECT * FROM Students WHERE email='$email' AND `password`='$password'";
         $result = $conn->query($sql);
         if($result->num_rows > 0){
+            session_start();
             $_SESSION['email'] = $email;
             header("Location: ../dashboard.php");
         } else {
-            header("Location: forms/login.php");
+            echo "<script>alert('Incorrect email and /or password')</script>";
+            header('refresh:1; url=forms/login.php");
         }
     }
 
@@ -73,7 +82,7 @@ class UserAuth extends Dbh{
                     <td style='width: 150px'> 
                     <form action='action.php' method='post'>
                     <input type='hidden' name='id'" .
-                     "value=" . $data['id'] . ">".
+                     "value=" . $data['email'] . ">".
                     "<button class='btn btn-danger' type='submit', name='delete'> DELETE </button> </form> </td>".
                     "</tr>";
             }
@@ -81,31 +90,49 @@ class UserAuth extends Dbh{
         }
     }
 
-    public function deleteUser($id){
+    public function deleteUser($email){
         $conn = $this->db->connect();
-        $sql = "DELETE FROM Students WHERE id = '$id'";
+        $sql = "DELETE FROM Students WHERE id = '$email'";
         if($conn->query($sql) === TRUE){
+            echo "<script>alert('Successfully Deleted')</script>";
             header("refresh:0.5; url=action.php?all");
         } else {
+         echo "<script>alert('Unable to delete user')</script>";
             header("refresh:0.5; url=action.php?all=?message=Error");
         }
     }
 
-    public function updateUser($username, $password){
+    public function updateUser($email, $password){
         $conn = $this->db->connect();
-        $sql = "UPDATE users SET password = '$password' WHERE username = '$username'";
+         if ($this->checkEmailExist($email)) {
+        $sql = "UPDATE users SET password = '$password' WHERE email = '$email'";
         if($conn->query($sql) === TRUE){
-            header("Location: ../dashboard.php?update=success");
+         echo "<script>alert('Password reset was successfull')</script>";
+            header('refresh:0.5; url=forms/login.php');
         } else {
             header("Location: forms/resetpassword.php?error=1");
         }
+        else {
+            echo "<script>alert('This user does not exist')</script>";
+            header('refresh:0.5;url=forms/resetpassword.php');
+        }
     }
 
-    public function getUserByUsername($username){
+    public function checkEmailExist($email){
+        $conn = $this->db->connect();
+        $sql = "SELECT * FROM users WHERE email = '$email'";
+        $result = $conn->query($sql);
+        if($result->num_rows > 0){
+            return true;
+        } else {
+            return false;
+        }
+         public function getUserByUsername($username)
+    {
         $conn = $this->db->connect();
         $sql = "SELECT * FROM users WHERE username = '$username'";
         $result = $conn->query($sql);
-        if($result->num_rows > 0){
+        if ($result->num_rows > 0) {
             return $result->fetch_assoc();
         } else {
             return false;
